@@ -105,8 +105,8 @@ def main(stdscr):
 			if key in (83, 115):
 				x = x+1
 			updateVelocity()
-			message = str(key)
-			prompter.addstr(height-1, 0, message) # ("message: ,  height: "+str(height)+" ")*200
+			# message = str(key)
+			# prompter.addstr(height-1, 0, message)
 	time.sleep(0.5)
 
 	# Prompting complete 
