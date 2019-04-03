@@ -10,7 +10,7 @@
 #
 #	This program is distributed in the hope that it will be useful,
 #	but WITHOUT ANY WARRANTY; without even the implied warranty of
-#	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See theRemote 
+#	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #	GNU General Public License for more details.
 #
 #	You should have received a copy of the GNU General Public License
@@ -18,7 +18,7 @@
 
 #	Hello there!
 #	This software was made as an April Fools joke and is not meant to be
-#	used production used in production.
+#	used in production.
 
 # Load dependencies
 import curses
@@ -28,10 +28,12 @@ from curses import wrapper
 from curses.textpad import Textbox, rectangle
 
 # Globals
+debug = False
+delay = 1
+# Default values for velocity control
 x = 4
 speedMultip = 3
 sensitivity = 1.65
-delay = 1
 
 # Main
 def main(stdscr):
@@ -55,20 +57,24 @@ def main(stdscr):
 def main(stdscr):
 	global x
 
+	# Compute terminal size and, thus, usable area
 	height = curses.LINES - 3
 	width = curses.COLS - 4
 	begin_y = 2
 	begin_x = 1
 
+	# Display header information
 	stdscr.addstr(0, width//2-26, " Teleprompter for Terminals by Imaginary Sense Inc. ", curses.A_STANDOUT)
 	stdscr.addstr(1, 0, "Enter text to prompt: (press Ctrl-G to start prompting)")
 
+	# Create editable area window
 	editwin = curses.newwin(height, width, begin_y, 1+begin_x)
 	rectangle(stdscr, begin_y, begin_x, 2+height, 2+width)
-	# stdscr.addstr(height+2, 5, "Licensed under the General Public License v3")
 	stdscr.refresh()
 
+	# Turn edit window into a Textbox 
 	box = Textbox(editwin)
+	# Keep whitespace when gathering data
 	box.stripspaces = False
 
 	# Let the user edit until Ctrl-G is struck.
@@ -77,39 +83,56 @@ def main(stdscr):
 	# Get resulting contents
 	message = box.gather()
 	
+	# Add reading area markers
 	stdscr.addstr(height//2+1, 0, ">>")
 	stdscr.addstr(height//2+1, width+1, "<<")
+	# Display instructions
 	stdscr.addstr(height+2, 5, " [ W decrease speed ]  [ S increase speed ] ")
 	stdscr.refresh()
 
-	# Prompt
-	prompter = curses.newpad(height*3, width) #, begin_y, 1+begin_x
-	prompter.overlay(editwin, 0, 0, begin_y, begin_x, height-2, width-2) #
+	# Create prompter pad (a pad can extend beyond viewable area)
+	# Having a fixed pad size (height*3) is one of those things that makes this implementation impractical for production.
+	# Pagination functions would have to be implemented, but hey, this is an April Fools joke.
+	prompter = curses.newpad(height*3, width)
+	# Overlay prompter over editwin
+	prompter.overlay(editwin, 0, 0, begin_y, begin_x, height-2, width-2)
+	# Don't prompt the user for input, grab the last keypress on getch()
 	prompter.nodelay(True)
 	
+	# Set velocity for the first time
 	updateVelocity()
-	pause = False
+	# pause = False
 
 	# Add text to prompter
-	prompter.addstr(height-1, 0, message) # ("message: ,  height: "+str(height)+" ")*200
+	prompter.addstr(height-1, 0, message)
+	# Begin scroll loop
+	# Using Python's for loop is a bad implementation because it makes it difficult to change scrolling directions.
+	# Re implementing this with a while loop is adviced for production.
 	for i in range(0, height*3):
+		# Refresh promptable area while scrolling the pad.
 		prompter.refresh(0+i, 0, 2, 2, height+1, width)
+		# Post scrolling delay
 		time.sleep(delay)
+		# Debug: Default delay used during testing
 		# time.sleep(0.2)
+		# Grab the last key pressed
 		key = prompter.getch()
 		if key != -1:
-			if key == 32:
-				pause = not pause
+			# if key == 32:
+				# pause = not pause
 			if key in (87, 119):
 				x = x-1
 			if key in (83, 115):
 				x = x+1
 			updateVelocity()
-			# message = str(key)
-			# prompter.addstr(height-1, 0, message)
+			# Debug: Display key on prompable area
+			if debug:
+				message = str(key)
+				prompter.addstr(height-1, 0, message)
+	# Add a 0.5s delay for retro feelings
 	time.sleep(0.5)
 
-	# Prompting complete 
+	# Notify prompting complete
 	stdscr.addstr(height//2+1, width//2+1-8, "Prompting complete")
 	stdscr.refresh()
 	time.sleep(2)
@@ -117,6 +140,7 @@ def main(stdscr):
 	stdscr.refresh()
 	time.sleep(4)
 
+# Update velocity with something similar to Imaginary Teleprompter's exponential curve
 def updateVelocity():
 	global delay
 	global x
@@ -125,7 +149,8 @@ def updateVelocity():
 	velocity = speedMultip*math.pow(math.fabs(x),sensitivity)
 	delay = 5/velocity
 
-# Run main
+# Run main with nCurses
+# Wrapping with nCurses instead of running directly prevents the terminal from getting screwed up on a crash
 wrapper(main)
 
 # Unload nCurses
