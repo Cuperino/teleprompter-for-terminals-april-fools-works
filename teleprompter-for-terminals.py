@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 
 #	Teleprompter for Terminals by Imaginary Sense Inc.
-#	Copyright (C) 2020 Imaginary Sense Inc and contributors
+#	Copyright (C) 2021 Imaginary Sense Inc and contributors
 #
 #	This program is free software: you can redistribute it and/or modify
 #	it under the terms of the GNU General Public License as published by
@@ -28,12 +28,12 @@ from curses import wrapper
 from curses.textpad import Textbox, rectangle
 
 # Globals
-debug = False
+debug = True
 delay = 1
 # Default values for velocity control
 x = 4
-speedMultip = 3
-sensitivity = 1.65
+speedMultip = 1.2
+sensitivity = 1.45
 
 # Main
 def main(stdscr):
@@ -62,6 +62,7 @@ def main(stdscr):
 	width = curses.COLS - 4
 	begin_y = 2
 	begin_x = 1
+	progress = 0
 
 	# Display header information
 	stdscr.addstr(0, width//2-26, " Teleprompter for Terminals by Imaginary Sense Inc. ", curses.A_STANDOUT)
@@ -71,6 +72,10 @@ def main(stdscr):
 	editwin = curses.newwin(height, width, begin_y, 1+begin_x)
 	rectangle(stdscr, begin_y, begin_x, 2+height, 2+width)
 	stdscr.refresh()
+
+	editwin.insstr(1,1,"Welcome to Teleprompter for Terminals")
+	editwin.insstr(2,4,"Are you ready to tell a story?")
+	editwin.move(2,34)
 
 	# Turn edit window into a Textbox 
 	box = Textbox(editwin)
@@ -108,27 +113,38 @@ def main(stdscr):
 	# Begin scroll loop
 	# Using Python's for loop is a bad implementation because it makes it difficult to change scrolling directions.
 	# Re implementing this with a while loop is adviced for production.
-	for i in range(0, height*3):
+	i = 1
+	while i < height*3:
 		# Refresh promptable area while scrolling the pad.
-		prompter.refresh(0+i, 0, 2, 2, height+1, width)
+		if x > 0:
+			prompter.refresh(i, 0, 2, 2, height+1, width)	
+			i = i + 1
+		if x < 0:
+			prompter.refresh(i, 0, 2, 2, height+1, width)	
+			i = i - 1
+		else:
+			i = i
 		# Post scrolling delay
-		time.sleep(delay)
-		# Debug: Default delay used during testing
-		# time.sleep(0.2)
-		# Grab the last key pressed
-		key = prompter.getch()
-		if key != -1:
-			# if key == 32:
-				# pause = not pause
-			if key in (87, 119):
-				x = x-1
-			if key in (83, 115):
-				x = x+1
-			updateVelocity()
-			# Debug: Display key on prompable area
-			if debug:
-				message = str(key)
-				prompter.addstr(height-1, 0, message)
+		while x==0 or delay-progress > 0.002:
+			time.sleep(0.002)
+			progress = progress + 0.002
+			# Debug: Default delay used during testing
+			# time.sleep(0.2)
+			# Grab the last key pressed
+			key = prompter.getch()
+			if key != -1:
+				# if key == 32:
+					# pause = not pause
+				if key in (87, 119):
+					x = x-1
+				if key in (83, 115):
+					x = x+1
+				updateVelocity()
+				# Debug: Display key on prompable area
+				if debug:
+					message = str(key)
+					prompter.addstr(height-1, 0, message)
+		progress = 0
 	# Add a 0.5s delay for retro feelings
 	time.sleep(0.5)
 
@@ -144,10 +160,11 @@ def main(stdscr):
 def updateVelocity():
 	global delay
 	global x
-	if x == 0:
-		x = 1
-	velocity = speedMultip*math.pow(math.fabs(x),sensitivity)
-	delay = 5/velocity
+	if x != 0:
+		velocity = speedMultip*math.pow(math.fabs(x),sensitivity)
+		delay = 5/velocity
+	else:
+		delay = 0
 
 # Run main with nCurses
 # Wrapping with nCurses instead of running directly prevents the terminal from getting screwed up on a crash
