@@ -28,7 +28,7 @@ from curses import wrapper
 from curses.textpad import Textbox, rectangle
 
 # Globals
-debug = True
+debug = False
 delay = 1
 # Default values for velocity control
 x = 4
