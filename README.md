@@ -1,4 +1,4 @@
-# Teleprompter for Terminals
+# April Fools: Teleprompter for Terminals
 Ever thought an Electron based teleprompting software consumes way too many resources for your needs? SSH into Teleprompter for Terminals, a teleprompting solution with no dependencies on X.
 
 Demo video: https://www.youtube.com/watch?v=qyKezSfxEHo
